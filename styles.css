@@ -1,0 +1,120 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f3f4f6;
+  color: #1f2937;
+  align: middle;
+}
+
+.header {
+  background-color: #1e40af;
+  color: white;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.nav {
+  margin-top: 0.5rem;
+}
+
+.nav a {
+  margin: 0 1rem;
+  color: #dbeafe;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.nav a:hover {
+  text-decoration: underline;
+}
+
+.main {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.footer {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+}
+
+.footer a {
+  margin: 0 0.5rem;
+  color: #2563eb;
+}
+
+a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+}
+.container {
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 100%;
+      vertical-align: middle;
+      align: middle;
+}
+h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+}
+input, select {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+}
+button {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+}
+button:hover {
+      background-color: #1e40af;
+}
+.result {
+      margin-top: 1rem;
+      background-color: #f9fafb;
+      padding: 1rem;
+      border-radius: 0.5rem;
+}
+.error {
+      color: red;
+      font-weight: bold;
+}
+.result p {
+      margin: 0.3rem 0;
+      font-size: 0.95rem;
+}
