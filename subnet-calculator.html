@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Network Tools Home</title>
+  <link rel="stylesheet" href="styles.css">
+ </head>
+<body>
+  <div class="header">
+    <h1>Network Tools</h1>
+   </div>
+  <div class="main">
+    <h1>Subnet Calculator</h1>
+    <select id="ipVersion" onchange="updateCIDROptions()">
+      <option value="ipv4">IPv4</option>
+      <option value="ipv6">IPv6</option>
+    </select>
+    <input type="text" id="ip" placeholder="Enter IP address" />
+    <select id="cidr"></select>
+    <button onclick="calculate()">Calculate</button>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function updateCIDROptions() {
+      const cidrSelect = document.getElementById('cidr');
+      const ipVersion = document.getElementById('ipVersion').value;
+      cidrSelect.innerHTML = '';
+      const max = ipVersion === 'ipv4' ? 32 : 128;
+      for (let i = max; i >= (ipVersion === 'ipv4' ? 8 : 64); i--) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `/${i}`;
+        cidrSelect.appendChild(option);
+      }
+    }
+
+    updateCIDROptions();
+
+    function toIp(num) {
+      return [24, 16, 8, 0].map(shift => (num >>> shift) & 255).join('.');
+    }
+
+    function cidrToMask(cidr) {
+      return ((0xffffffff << (32 - cidr)) >>> 0)
+        .toString(2)
+        .match(/.{1,8}/g)
+        .map(bin => parseInt(bin, 2))
+        .join('.');
+    }
+
+    function isIPv6(ip) {
+      return ip.includes(':');
+    }
+
+    function expandIPv6(ip) {
+      const full = ip.replace('::', ':' + '0:'.repeat(8 - ip.split(':').filter(Boolean).length)).split(':');
+      return full.map(h => h.padStart(4, '0')).join(":");
+    }
+
+    function compressIPv6(ipv6) {
+      return ipv6.replace(/(^|:)0{1,3}/g, '$1').replace(/(:0)+/, '::').replace(/^0:/, '::');
+    }
+
+    function binToIPv6(bin) {
+      return Array.from({ length: 8 }, (_, i) =>
+        parseInt(bin.slice(i * 16, (i + 1) * 16), 2).toString(16)
+      ).join(':');
+    }
+
+    function getIPv6Type(ip) {
+      if (ip.startsWith("fe80")) return "Link-local";
+      if (ip.startsWith("fc") || ip.startsWith("fd")) return "Unique local";
+      if (ip.startsWith("ff")) return "Multicast";
+      if (ip === "::1") return "Loopback";
+      if (ip.startsWith("::")) return "Unspecified";
+      return "Global Unicast";
+    }
+
+    function calculate() {
+      const ip = document.getElementById('ip').value.trim();
+      const cidr = parseInt(document.getElementById('cidr').value);
+      const ipVersion = document.getElementById('ipVersion').value;
+      const resultDiv = document.getElementById('result');
+
+      if (ipVersion === 'ipv6') {
+        if (!isIPv6(ip)) {
+          resultDiv.innerHTML = '<p class="error">Invalid IPv6 address.</p>';
+          return;
+        }
+
+        const expanded = expandIPv6(ip);
+        const ipBin = expanded.split(':').map(part => parseInt(part, 16).toString(2).padStart(16, '0')).join('');
+        const networkBin = ipBin.substring(0, cidr).padEnd(128, '0');
+        const minHostBin = networkBin.substring(0, 127) + '1';
+        const maxHostBin = ipBin.substring(0, cidr).padEnd(128, '1');
+
+        const numHosts = BigInt(2) ** BigInt(128 - cidr);
+
+        const netAddrExpanded = binToIPv6(networkBin);
+        const minHostExpanded = binToIPv6(minHostBin);
+        const maxHostExpanded = binToIPv6(maxHostBin);
+
+        resultDiv.innerHTML = `
+          <p><strong>IPv6 Address (input):</strong> ${ip}</p>
+          <p><strong>Address Type:</strong> ${getIPv6Type(expanded.replace(/:/g, '').slice(0, 4).toLowerCase())}</p>
+          <p><strong>Expanded Format:</strong> ${expanded}</p>
+          <p><strong>Compressed Format:</strong> ${compressIPv6(expanded)}</p>
+          <p><strong>Prefix:</strong> /${cidr}</p>
+          <p><strong>Network Address (expanded):</strong> ${netAddrExpanded}</p>
+          <p><strong>Network Address (compressed):</strong> ${compressIPv6(netAddrExpanded)}</p>
+          <p><strong>First Host (compressed):</strong> ${compressIPv6(minHostExpanded)}</p>
+          <p><strong>Last Host (compressed):</strong> ${compressIPv6(maxHostExpanded)}</p>
+          <p><strong>Broadcast:</strong> Not applicable for IPv6</p>
+          <p><strong>Total Addresses in Subnet:</strong> ${numHosts.toLocaleString()}</p>
+        `;
+        return;
+      }
+
+      const ipParts = ip.split('.').map(Number);
+      const maskParts = cidrToMask(cidr).split('.').map(Number);
+
+      if (
+        ipParts.length !== 4 ||
+        maskParts.length !== 4 ||
+        ipParts.some(p => p > 255 || p < 0) ||
+        maskParts.some(p => p > 255 || p < 0)
+      ) {
+        resultDiv.innerHTML = '<p class="error">Invalid IPv4 address or subnet mask.</p>';
+        return;
+      }
+
+      const ipNum = ipParts.reduce((acc, part) => (acc << 8) | part, 0);
+      const maskNum = maskParts.reduce((acc, part) => (acc << 8) | part, 0);
+
+      const network = ipNum & maskNum;
+      const broadcast = network | (~maskNum >>> 0);
+      const hostMin = cidr === 32 ? network : network + 1;
+      const hostMax = cidr === 32 ? network : broadcast - 1;
+      const hostCount = cidr >= 31 ? (2 ** (32 - cidr)) : (2 ** (32 - cidr) - 2);
+
+      resultDiv.innerHTML = `
+        <p><strong>IPv4 Address:</strong> ${ip}</p>
+        <p><strong>Subnet Mask:</strong> ${maskParts.join('.')}</p>
+        <p><strong>Network Address:</strong> ${toIp(network)}</p>
+        <p><strong>First Host:</strong> ${toIp(hostMin)}</p>
+        <p><strong>Last Host:</strong> ${toIp(hostMax)}</p>
+        <p><strong>Broadcast Address:</strong> ${toIp(broadcast)}</p>
+        <p><strong>Usable Hosts:</strong> ${hostCount}</p>
+      `;
+    }
+  </script>
+<div class="footer">
+    <p>&copy; 2025 unxdev.com. All rights reserved.</p>
+    <p>
+      <a href="https://github.com/dlopescruz" target="_blank" title="GitHub">
+        <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/github.svg" alt="GitHub" class="icon" />
+      </a>
+    </p>
+    <p>
+      If you would like to support this project, donations are welcome via Monero (XMR):<br />
+      <code>42k1VqGLnaBQ7QtphE9HJDeGiYbJ6bWJ5N4By7HV1mMBERHxAVdJoYtPYdoiDDL9yNCoN5iwUnXx7TQk7vJiB38C4ukiJL4</code>
+    </p>
+  </div>
+</body>
+</html>
